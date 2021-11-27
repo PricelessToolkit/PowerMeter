@@ -1,0 +1,152 @@
+esphome:
+  name: pmeter
+  platform: ESP8266
+  board: esp01
+
+
+wifi:
+  ssid: !secret WIFI_ssid
+  password: !secret WIFI_password
+  #domain: .lab.lan
+  fast_connect: on
+
+# Disable logging
+logger:
+  baud_rate: 0
+
+# Enable Home Assistant API
+api:
+
+
+uart:
+  - id: ubus1
+    tx_pin: GPIO1
+    rx_pin: GPIO3
+    baud_rate: 9600
+    stop_bits: 1     #For ESP32 try value 2
+  
+
+time:
+  platform: sntp
+  id: my_time
+  
+  on_time:
+      - seconds: 57
+        minutes: 59
+        hours: 23
+        then:  
+          - sensor.template.publish:
+              id: template_pMeter_veille
+              state: !lambda return id(pMeter_power_of_day).state;
+  
+sensor:
+   
+     #### PZEM-004T V3 ####
+    
+  - platform: pzemac
+    address: 1
+    current:
+      name: "pMeter_current"
+      accuracy_decimals: 2
+    voltage:
+      name: "pMeter_voltage"
+      accuracy_decimals: 2
+    power:
+      name: "pMeter_power"
+      unit_of_measurement: W
+      accuracy_decimals: 2
+      id: pMeter_power
+    frequency:
+      name: "pMeter_frequency"
+      unit_of_measurement: Hz
+      accuracy_decimals: 2
+    power_factor:
+      name: "pMeter_power_factor"
+      accuracy_decimals: 2
+      id: pMeter_power_factor
+    energy:
+      name: "pMeter_energy"
+      unit_of_measurement: Wh
+      accuracy_decimals: 1
+      id: pMeter_energy
+    update_interval: 5s
+
+
+  - platform: template
+    name: "pMeter_cumulative power"
+    unit_of_measurement: "kWh"
+    accuracy_decimals: 1
+    update_interval: 5s
+    icon: mdi:power
+    lambda: return (( (id(pMeter_energy).state)/1000.0));
+    
+  - platform: total_daily_energy
+    name: "pMeter_of_day"
+    power_id: pMeter_power 
+    unit_of_measurement: "kWh"
+    accuracy_decimals: 2
+    id: pMeter_power_of_day
+    filters:
+        # Multiplication factor from W to kW is 0.001
+        - multiply: 0.001
+    icon: mdi:counter
+    
+  - platform: template
+    name: "pMeter_veille"
+    id: template_pMeter_veille
+    unit_of_measurement: "kwh"
+    accuracy_decimals: 2
+    icon: mdi:power
+    update_interval: 10s
+    
+  - platform: template
+    name: "pMeter_power_apparente"
+    id: pMeter_power_apparente
+    unit_of_measurement: "VA"
+    accuracy_decimals: 2
+    update_interval: 10s
+    icon: mdi:power
+    lambda: return ( (id(pMeter_power).state/id(pMeter_power_factor).state));
+  
+  - platform: template
+    name: "pMeter_power_reactive"
+    id: pMeter_power_reactive
+    unit_of_measurement: "VAr"
+    accuracy_decimals: 2
+    update_interval: 10s
+    icon: mdi:power
+    #lambda: return ( ((id(pMeter_power_reactive).state)*sin(acos((id(pMeter_power_factor).state))) ) );
+    lambda: return ( ( sqrt( (id(pMeter_power_reactive).state)*(id(pMeter_power_reactive).state)   -  (id(pMeter_power_factor).state)*(id(pMeter_power_factor).state) ) )  );
+    
+  - platform: wifi_signal
+    name: "WiFi power_pMeter"
+    update_interval: 10s
+    
+  - platform: uptime
+    name: "up"
+    id: uptime_sec 
+ 
+switch:
+  - platform: restart
+    name: "pMeter_restart"
+    
+    
+binary_sensor:
+  - platform: status
+    name: "pMeter_status"    
+    
+    
+text_sensor:
+  - platform: template
+    name: pMeter_uptime
+    lambda: |-
+      int seconds = (id(uptime_sec).state);
+      int days = seconds / (24 * 3600);
+      seconds = seconds % (24 * 3600); 
+      int hours = seconds / 3600;
+      seconds = seconds % 3600;
+      int minutes = seconds /  60;
+      seconds = seconds % 60;
+      return { (String(days) +"d " + String(hours) +"h " + String(minutes) +"m "+ String(seconds) +"s").c_str() };
+    icon: mdi:clock-start
+    update_interval: 113s

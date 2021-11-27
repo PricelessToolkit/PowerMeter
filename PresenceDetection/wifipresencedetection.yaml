@@ -1,0 +1,19 @@
+sensor:
+  - platform: template
+    sensors:
+      madman_wifipresencedetection:
+        value_template: >-
+          {% if states('sensor.oneplus_a5010_connexion_wi_fi') == "INET-WIFI" %}
+            home
+          {% else %}
+            not_home
+          {% endif %}
+
+      astrik_wifipresencedetection:
+        value_template: >-
+          {% if states('sensor.oneplus8t_connexion_wi_fi') == "INET-WIFI" %}
+            home
+          {% else %}
+            not_home
+          {% endif %}
+        friendly_name: "WiFiPresenceDetection"
