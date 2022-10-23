@@ -115,8 +115,7 @@ sensor:
     accuracy_decimals: 2
     update_interval: 10s
     icon: mdi:power
-    #lambda: return ( ((id(pMeter_power_reactive).state)*sin(acos((id(pMeter_power_factor).state))) ) );
-    lambda: return ( ( sqrt( (id(pMeter_power_reactive).state)*(id(pMeter_power_reactive).state)   -  (id(pMeter_power_factor).state)*(id(pMeter_power_factor).state) ) )  );
+    lambda: return ( ( sqrt( (id(pMeter_power_apparente).state)*(id(pMeter_power_apparente).state)   -  (id(pMeter_power).state)*(id(pMeter_power).state) ) )  );
     
   - platform: wifi_signal
     name: "WiFi power_pMeter"
